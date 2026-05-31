@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# BigQuery / credenciales (nunca subir llaves)
+*.json
+!data/*.json
+service-account*.json
+credentials*.json
