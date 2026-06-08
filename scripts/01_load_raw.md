@@ -53,12 +53,12 @@ order_id:STRING,fecha:STRING,customer_id:STRING,product_id:STRING,cantidad:STRIN
 
 ## Verificación rápida
 
-Ejecuta en el editor de consultas (reemplaza `august-tower-470819-s6`):
+Ejecuta en el editor de consultas (reemplaza `PROJECT_ID`):
 
 ```sql
-SELECT 'productos' AS tabla, COUNT(*) AS filas FROM `august-tower-470819-s6.raw.productos`
-UNION ALL SELECT 'clientes', COUNT(*) FROM `august-tower-470819-s6.raw.clientes`
-UNION ALL SELECT 'ventas',   COUNT(*) FROM `august-tower-470819-s6.raw.ventas`;
+SELECT 'productos' AS tabla, COUNT(*) AS filas FROM `PROJECT_ID.raw.productos`
+UNION ALL SELECT 'clientes', COUNT(*) FROM `PROJECT_ID.raw.clientes`
+UNION ALL SELECT 'ventas',   COUNT(*) FROM `PROJECT_ID.raw.ventas`;
 ```
 
 Deberías ver **200**, **5 000** y **300 000** filas respectivamente. Si coincide,

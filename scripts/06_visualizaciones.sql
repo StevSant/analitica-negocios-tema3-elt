@@ -2,7 +2,7 @@
 -- 06_visualizaciones.sql — Consultas para demo visual (antes/después + KPIs)
 -- =============================================================================
 -- Ejecutar UNA consulta por pestaña. En Resultados → pestaña "Visualización".
--- Proyecto: august-tower-470819-s6
+-- Proyecto: PROJECT_ID
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ SELECT
   cantidad,
   precio_unitario,
   CAST(NULL AS STRING) AS monto_neto
-FROM `august-tower-470819-s6.raw.ventas`
+FROM `PROJECT_ID.raw.ventas`
 LIMIT 5
 
 UNION ALL
@@ -26,7 +26,7 @@ SELECT
   CAST(cantidad AS STRING),
   CAST(precio_unitario AS STRING),
   CAST(monto_neto AS STRING)
-FROM `august-tower-470819-s6.staging.stg_ventas`
+FROM `PROJECT_ID.staging.stg_ventas`
 LIMIT 5;
 
 -- ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ LIMIT 5;
 --    Dimensión: nombre_mes (o anio+mes) · Medición: ventas_netas
 -- ---------------------------------------------------------------------------
 SELECT nombre_mes, anio, mes, ventas_netas, num_ordenes, ticket_promedio
-FROM `august-tower-470819-s6.analytics.kpi_ventas_mensuales`
+FROM `PROJECT_ID.analytics.kpi_ventas_mensuales`
 ORDER BY anio, mes;
 
 -- ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ ORDER BY anio, mes;
 --    Dimensión: canal · Medición: ventas_netas
 -- ---------------------------------------------------------------------------
 SELECT canal, ventas_netas, num_ordenes
-FROM `august-tower-470819-s6.analytics.kpi_ventas_canal`
+FROM `PROJECT_ID.analytics.kpi_ventas_canal`
 ORDER BY ventas_netas DESC;
 
 -- ---------------------------------------------------------------------------
@@ -50,13 +50,13 @@ ORDER BY ventas_netas DESC;
 --    Dimensión: categoria · Medición: margen o ventas_netas
 -- ---------------------------------------------------------------------------
 SELECT categoria, ventas_netas, margen, margen_pct
-FROM `august-tower-470819-s6.analytics.kpi_margen_categoria`
+FROM `PROJECT_ID.analytics.kpi_margen_categoria`
 ORDER BY margen DESC;
 
 -- ---------------------------------------------------------------------------
 -- 5. DESPUÉS — Top 10 clientes (ranking en BARRAS)
 -- ---------------------------------------------------------------------------
 SELECT nombre_cliente, ciudad, valor_total
-FROM `august-tower-470819-s6.analytics.kpi_top_clientes`
+FROM `PROJECT_ID.analytics.kpi_top_clientes`
 ORDER BY valor_total DESC
 LIMIT 10;
