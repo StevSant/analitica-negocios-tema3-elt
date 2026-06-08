@@ -9,13 +9,13 @@
 -- PRECIO ON-DEMAND (referencia, ajústalo al vigente): 6.25 USD por TiB escaneado.
 --   costo_usd = bytes_procesados / (1024^4) * 6.25
 --
--- Reemplaza `PROJECT_ID`.
+-- Reemplaza `august-tower-470819-s6`.
 -- =============================================================================
 
 -- PASO 1 — Crear una copia SIN particionar (simula un diseño "ETL plano"
 --          o una tabla mal modelada). Misma data, sin partición ni clustering.
-CREATE OR REPLACE TABLE `hackiaton-ia.analytics.fact_ventas_flat` AS
-SELECT * FROM `hackiaton-ia.analytics.fact_ventas`;
+CREATE OR REPLACE TABLE `august-tower-470819-s6.analytics.fact_ventas_flat` AS
+SELECT * FROM `august-tower-470819-s6.analytics.fact_ventas`;
 
 -- -----------------------------------------------------------------------------
 -- PASO 2 — Ejecutar las DOS consultas siguientes UNA POR UNA y, ANTES de correr
@@ -27,14 +27,14 @@ SELECT * FROM `hackiaton-ia.analytics.fact_ventas`;
 -- (A) Tabla PARTICIONADA  ->  BigQuery hace "partition pruning":
 --     solo lee las particiones del rango de fechas pedido.
 SELECT canal, ROUND(SUM(monto_neto), 2) AS ventas
-FROM `hackiaton-ia.analytics.fact_ventas`
+FROM `august-tower-470819-s6.analytics.fact_ventas`
 WHERE fecha BETWEEN '2025-01-01' AND '2025-03-31'
 GROUP BY canal;
 
 -- (B) Tabla PLANA (sin partición)  ->  escanea TODA la tabla aunque
 --     pidas solo 3 meses. Mismo resultado, MUCHOS más bytes facturados.
 SELECT canal, ROUND(SUM(monto_neto), 2) AS ventas
-FROM `hackiaton-ia.analytics.fact_ventas_flat`
+FROM `august-tower-470819-s6.analytics.fact_ventas_flat`
 WHERE fecha BETWEEN '2025-01-01' AND '2025-03-31'
 GROUP BY canal;
 

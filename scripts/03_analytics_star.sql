@@ -11,11 +11,11 @@
 -- BigQuery soporta PRIMARY KEY / FOREIGN KEY como restricciones NOT ENFORCED:
 -- no bloquean la carga, pero documentan el modelo y el motor las aprovecha.
 --
--- Reemplaza `PROJECT_ID`.
+-- Reemplaza `august-tower-470819-s6`.
 -- =============================================================================
 
 -- --- DIMENSIÓN: Cliente ----------------------------------------------------
-CREATE OR REPLACE TABLE `hackiaton-ia.analytics.dim_cliente`
+CREATE OR REPLACE TABLE `august-tower-470819-s6.analytics.dim_cliente`
 (
   customer_id    STRING NOT NULL,
   nombre         STRING,
@@ -25,10 +25,10 @@ CREATE OR REPLACE TABLE `hackiaton-ia.analytics.dim_cliente`
   PRIMARY KEY (customer_id) NOT ENFORCED
 )
 AS SELECT customer_id, nombre, ciudad, segmento, fecha_registro
-   FROM `hackiaton-ia.staging.stg_clientes`;
+   FROM `august-tower-470819-s6.staging.stg_clientes`;
 
 -- --- DIMENSIÓN: Producto ---------------------------------------------------
-CREATE OR REPLACE TABLE `hackiaton-ia.analytics.dim_producto`
+CREATE OR REPLACE TABLE `august-tower-470819-s6.analytics.dim_producto`
 (
   product_id     STRING NOT NULL,
   nombre         STRING,
@@ -39,10 +39,10 @@ CREATE OR REPLACE TABLE `hackiaton-ia.analytics.dim_producto`
   PRIMARY KEY (product_id) NOT ENFORCED
 )
 AS SELECT product_id, nombre, categoria, subcategoria, costo_unitario, marca
-   FROM `hackiaton-ia.staging.stg_productos`;
+   FROM `august-tower-470819-s6.staging.stg_productos`;
 
 -- --- DIMENSIÓN: Fecha (generada con SQL, no viene de ningún CSV) -----------
-CREATE OR REPLACE TABLE `hackiaton-ia.analytics.dim_fecha`
+CREATE OR REPLACE TABLE `august-tower-470819-s6.analytics.dim_fecha`
 (
   fecha       DATE NOT NULL,
   anio        INT64,
@@ -67,7 +67,7 @@ FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2024-01-01', DATE '2025-12-31')) AS d;
 -- --- HECHOS: Ventas --------------------------------------------------------
 -- Particionada por fecha + clusterizada por canal y producto:
 -- las consultas con filtro de fecha solo escanean las particiones necesarias.
-CREATE OR REPLACE TABLE `hackiaton-ia.analytics.fact_ventas`
+CREATE OR REPLACE TABLE `august-tower-470819-s6.analytics.fact_ventas`
 (
   order_id        STRING  NOT NULL,
   fecha           DATE    NOT NULL,
@@ -80,9 +80,9 @@ CREATE OR REPLACE TABLE `hackiaton-ia.analytics.fact_ventas`
   monto_bruto     NUMERIC,
   monto_neto      NUMERIC,
   PRIMARY KEY (order_id) NOT ENFORCED,
-  FOREIGN KEY (customer_id) REFERENCES `hackiaton-ia.analytics.dim_cliente`  (customer_id) NOT ENFORCED,
-  FOREIGN KEY (product_id)  REFERENCES `hackiaton-ia.analytics.dim_producto` (product_id)  NOT ENFORCED,
-  FOREIGN KEY (fecha)       REFERENCES `hackiaton-ia.analytics.dim_fecha`    (fecha)       NOT ENFORCED
+  FOREIGN KEY (customer_id) REFERENCES `august-tower-470819-s6.analytics.dim_cliente`  (customer_id) NOT ENFORCED,
+  FOREIGN KEY (product_id)  REFERENCES `august-tower-470819-s6.analytics.dim_producto` (product_id)  NOT ENFORCED,
+  FOREIGN KEY (fecha)       REFERENCES `august-tower-470819-s6.analytics.dim_fecha`    (fecha)       NOT ENFORCED
 )
 PARTITION BY fecha
 CLUSTER BY canal, product_id
@@ -90,7 +90,7 @@ AS
 SELECT
   order_id, fecha, customer_id, product_id,
   cantidad, precio_unitario, descuento, canal, monto_bruto, monto_neto
-FROM `hackiaton-ia.staging.stg_ventas`;
+FROM `august-tower-470819-s6.staging.stg_ventas`;
 
 -- --- Verificación ----------------------------------------------------------
--- SELECT COUNT(*) FROM `hackiaton-ia.analytics.fact_ventas`;   -- 300000
+-- SELECT COUNT(*) FROM `august-tower-470819-s6.analytics.fact_ventas`;   -- 300000
