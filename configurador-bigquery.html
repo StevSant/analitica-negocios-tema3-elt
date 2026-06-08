@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurador ELT — BigQuery</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #4285f4;
+      --accent-hover: #5a95f5;
+      --ok: #34a853;
+      --warn: #f9ab00;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    label { display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.9rem; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .hint { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; }
+    .btn-row { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-copy { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .btn-copy.copied { color: var(--ok); border-color: var(--ok); }
+    .steps { margin-top: 1.5rem; }
+    .step {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1rem;
+      background: var(--surface);
+      cursor: pointer;
+      user-select: none;
+    }
+    .step-header:hover { background: #222d3d; }
+    .step-title { font-weight: 600; font-size: 0.95rem; }
+    .step-badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      background: var(--border);
+      color: var(--muted);
+      margin-left: 0.5rem;
+    }
+    .step-badge.sql { background: #1e3a5f; color: #7eb8ff; }
+    .step-badge.manual { background: #3d3520; color: var(--warn); }
+    .step-body { display: none; padding: 1rem; border-top: 1px solid var(--border); background: var(--bg); }
+    .step.open .step-body { display: block; }
+    .step-desc { color: var(--muted); font-size: 0.85rem; margin-bottom: 0.75rem; }
+    pre {
+      background: #0a0e14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      overflow-x: auto;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .toolbar { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+    }
+    .schema-box {
+      background: #0a0e14;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      font-family: monospace;
+      font-size: 0.78rem;
+    }
+    table.csv-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; margin-top: 0.5rem; }
+    table.csv-table th, table.csv-table td {
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.6rem;
+      text-align: left;
+    }
+    table.csv-table th { background: var(--surface); }
+  </style>
+</head>
+<body>
+  <h1>Configurador ELT — BigQuery</h1>
+  <p class="subtitle">Práctica Tema 3 · Pega tu Project ID y copia cada paso listo para ejecutar</p>
+
+  <div class="card">
+    <label for="projectId">Project ID de Google Cloud</label>
+    <input type="text" id="projectId" placeholder="ej. elt-retail-grupo3-482910" autocomplete="off">
+    <p class="hint">Lo encuentras en BigQuery → panel izquierdo, debajo del nombre del proyecto.</p>
+    <div class="btn-row">
+      <button class="btn-primary" id="btnGenerate">Generar scripts</button>
+      <button class="btn-secondary" id="btnExpand">Abrir todos</button>
+    </div>
+  </div>
+
+  <div class="steps" id="stepsContainer">
+    <div class="empty-state" id="emptyState">
+      Escribe tu Project ID y pulsa <strong>Generar scripts</strong>
+    </div>
+  </div>
+
+  <script>
+    const PLACEHOLDER = "PROJECT_ID";
+
+    const STEPS = [
+      {
+        id: "00",
+        title: "Paso 2 — Crear datasets (raw, staging, analytics)",
+        type: "sql",
+        desc: "Ejecutar en BigQuery → + Consulta en SQL → pegar → Ejecutar.",
+        template: `-- 00_setup.sql
+CREATE SCHEMA IF NOT EXISTS \`PROJECT_ID.raw\`
+  OPTIONS (location = 'US', description = 'Capa cruda: CSV cargados sin transformar (EL)');
+
+CREATE SCHEMA IF NOT EXISTS \`PROJECT_ID.staging\`
+  OPTIONS (location = 'US', description = 'Capa intermedia: limpieza y casteo (T - paso 1)');
+
+CREATE SCHEMA IF NOT EXISTS \`PROJECT_ID.analytics\`
+  OPTIONS (location = 'US', description = 'Capa de negocio: modelo estrella y KPIs (T - paso 2)');`
+      },
+      {
+        id: "01",
+        title: "Paso 3 — Cargar CSV (manual en la consola)",
+        type: "manual",
+        desc: "Dataset raw → Crear tabla → Subir. Repetir 3 veces. Desactivar detección automática. Omitir 1 fila de encabezado.",
+        manual: true
+      },
+      {
+        id: "01v",
+        title: "Paso 4 — Verificar carga RAW",
+        type: "sql",
+        desc: "Debe mostrar: productos 200 · clientes 5000 · ventas 300000.",
+        template: `SELECT 'productos' AS tabla, COUNT(*) AS filas FROM \`PROJECT_ID.raw.productos\`
+UNION ALL SELECT 'clientes', COUNT(*) FROM \`PROJECT_ID.raw.clientes\`
+UNION ALL SELECT 'ventas',   COUNT(*) FROM \`PROJECT_ID.raw.ventas\`;`
+      },
+      {
+        id: "02",
+        title: "Paso 5 — Staging (limpieza y tipado)",
+        type: "sql",
+        desc: "Crea vistas stg_productos, stg_clientes, stg_ventas.",
+        template: "__STAGING__"
+      },
+      {
+        id: "03",
+        title: "Paso 6 — Modelo estrella (analytics)",
+        type: "sql",
+        desc: "Crea dim_* y fact_ventas (particionada + clusterizada).",
+        template: "__ANALYTICS__"
+      },
+      {
+        id: "03v",
+        title: "Verificar fact_ventas",
+        type: "sql",
+        desc: "Debe dar 300000 filas.",
+        template: `SELECT COUNT(*) AS filas FROM \`PROJECT_ID.analytics.fact_ventas\`;`
+      },
+      {
+        id: "04",
+        title: "Paso 7 — KPIs de negocio",
+        type: "sql",
+        desc: "Crea vistas kpi_ventas_mensuales, kpi_margen_categoria, etc.",
+        template: "__KPIS__"
+      },
+      {
+        id: "06a",
+        title: "Visual — Antes vs después (raw vs staging)",
+        type: "sql",
+        desc: "Ejecutar sola esta consulta. Comparar en tabla de resultados.",
+        template: `SELECT 'ANTES (raw)' AS etapa, fecha, cantidad, precio_unitario, CAST(NULL AS STRING) AS monto_neto
+FROM \`PROJECT_ID.raw.ventas\` LIMIT 5
+UNION ALL
+SELECT 'DESPUÉS (staging)', CAST(fecha AS STRING), CAST(cantidad AS STRING),
+       CAST(precio_unitario AS STRING), CAST(monto_neto AS STRING)
+FROM \`PROJECT_ID.staging.stg_ventas\` LIMIT 5;`
+      },
+      {
+        id: "06b",
+        title: "Visual — Ventas por mes (gráfico línea)",
+        type: "sql",
+        desc: "Resultados → pestaña Visualización → Línea: nombre_mes × ventas_netas.",
+        template: `SELECT nombre_mes, anio, mes, ventas_netas
+FROM \`PROJECT_ID.analytics.kpi_ventas_mensuales\`
+ORDER BY anio, mes;`
+      },
+      {
+        id: "06c",
+        title: "Visual — Ventas por canal (gráfico circular)",
+        type: "sql",
+        desc: "Visualización → Circular: canal × ventas_netas.",
+        template: `SELECT canal, ventas_netas
+FROM \`PROJECT_ID.analytics.kpi_ventas_canal\`
+ORDER BY ventas_netas DESC;`
+      },
+      {
+        id: "05a",
+        title: "Costos 5a — Crear tabla plana",
+        type: "sql",
+        desc: "Pestaña nueva. Solo este bloque.",
+        template: `CREATE OR REPLACE TABLE \`PROJECT_ID.analytics.fact_ventas_flat\` AS
+SELECT * FROM \`PROJECT_ID.analytics.fact_ventas\`;`
+      },
+      {
+        id: "05b",
+        title: "Costos 5b — Consulta (A) particionada",
+        type: "sql",
+        desc: "Anotar bytes del aviso ANTES de Ejecutar.",
+        template: `SELECT canal, ROUND(SUM(monto_neto), 2) AS ventas
+FROM \`PROJECT_ID.analytics.fact_ventas\`
+WHERE fecha BETWEEN '2025-01-01' AND '2025-03-31'
+GROUP BY canal;`
+      },
+      {
+        id: "05c",
+        title: "Costos 5c — Consulta (B) plana",
+        type: "sql",
+        desc: "Anotar bytes. Mismo filtro, más bytes procesados.",
+        template: `SELECT canal, ROUND(SUM(monto_neto), 2) AS ventas
+FROM \`PROJECT_ID.analytics.fact_ventas_flat\`
+WHERE fecha BETWEEN '2025-01-01' AND '2025-03-31'
+GROUP BY canal;`
+      },
+      {
+        id: "05d",
+        title: "Costos 5d — Calcular ahorro",
+        type: "sql",
+        desc: "Pestaña nueva SOLO con esto. Reemplazar los dos 0 por bytes reales.",
+        template: `DECLARE bytes_particionada INT64 DEFAULT 0;
+DECLARE bytes_plana        INT64 DEFAULT 0;
+DECLARE precio_usd_por_tib FLOAT64 DEFAULT 6.25;
+
+SELECT
+  bytes_particionada AS bytes_A,
+  bytes_plana        AS bytes_B,
+  ROUND(bytes_particionada / POW(1024, 4) * precio_usd_por_tib, 6) AS costo_A_usd,
+  ROUND(bytes_plana        / POW(1024, 4) * precio_usd_por_tib, 6) AS costo_B_usd,
+  ROUND((1 - SAFE_DIVIDE(bytes_particionada, bytes_plana)) * 100, 1) AS ahorro_pct;`
+      }
+    ];
+
+    const STAGING_SQL = `CREATE OR REPLACE VIEW \`PROJECT_ID.staging.stg_productos\` AS
+SELECT TRIM(product_id) AS product_id, TRIM(nombre) AS nombre, TRIM(categoria) AS categoria,
+  TRIM(subcategoria) AS subcategoria, CAST(costo_unitario AS NUMERIC) AS costo_unitario, TRIM(marca) AS marca
+FROM \`PROJECT_ID.raw.productos\`
+WHERE product_id IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY TRIM(product_id) ORDER BY TRIM(product_id)) = 1;
+
+CREATE OR REPLACE VIEW \`PROJECT_ID.staging.stg_clientes\` AS
+SELECT TRIM(customer_id) AS customer_id, TRIM(nombre) AS nombre, TRIM(ciudad) AS ciudad,
+  TRIM(segmento) AS segmento, SAFE.PARSE_DATE('%Y-%m-%d', fecha_registro) AS fecha_registro
+FROM \`PROJECT_ID.raw.clientes\`
+WHERE customer_id IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY TRIM(customer_id) ORDER BY TRIM(customer_id)) = 1;
+
+CREATE OR REPLACE VIEW \`PROJECT_ID.staging.stg_ventas\` AS
+SELECT TRIM(order_id) AS order_id, SAFE.PARSE_DATE('%Y-%m-%d', fecha) AS fecha,
+  TRIM(customer_id) AS customer_id, TRIM(product_id) AS product_id,
+  CAST(cantidad AS INT64) AS cantidad, CAST(precio_unitario AS NUMERIC) AS precio_unitario,
+  CAST(descuento AS NUMERIC) AS descuento, TRIM(canal) AS canal,
+  CAST(cantidad AS INT64) * CAST(precio_unitario AS NUMERIC) AS monto_bruto,
+  ROUND(CAST(cantidad AS INT64) * CAST(precio_unitario AS NUMERIC) * (1 - CAST(descuento AS NUMERIC)), 2) AS monto_neto
+FROM \`PROJECT_ID.raw.ventas\`
+WHERE order_id IS NOT NULL AND SAFE.PARSE_DATE('%Y-%m-%d', fecha) IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY TRIM(order_id) ORDER BY TRIM(order_id)) = 1;`;
+
+    const ANALYTICS_SQL = `CREATE OR REPLACE TABLE \`PROJECT_ID.analytics.dim_cliente\`
+(customer_id STRING NOT NULL, nombre STRING, ciudad STRING, segmento STRING, fecha_registro DATE,
+ PRIMARY KEY (customer_id) NOT ENFORCED)
+AS SELECT customer_id, nombre, ciudad, segmento, fecha_registro FROM \`PROJECT_ID.staging.stg_clientes\`;
+
+CREATE OR REPLACE TABLE \`PROJECT_ID.analytics.dim_producto\`
+(product_id STRING NOT NULL, nombre STRING, categoria STRING, subcategoria STRING,
+ costo_unitario NUMERIC, marca STRING, PRIMARY KEY (product_id) NOT ENFORCED)
+AS SELECT product_id, nombre, categoria, subcategoria, costo_unitario, marca FROM \`PROJECT_ID.staging.stg_productos\`;
+
+CREATE OR REPLACE TABLE \`PROJECT_ID.analytics.dim_fecha\`
+(fecha DATE NOT NULL, anio INT64, trimestre INT64, mes INT64, nombre_mes STRING, dia INT64, dia_semana STRING,
+ PRIMARY KEY (fecha) NOT ENFORCED)
+AS
+SELECT d AS fecha, EXTRACT(YEAR FROM d) AS anio, EXTRACT(QUARTER FROM d) AS trimestre,
+  EXTRACT(MONTH FROM d) AS mes, FORMAT_DATE('%B', d) AS nombre_mes,
+  EXTRACT(DAY FROM d) AS dia, FORMAT_DATE('%A', d) AS dia_semana
+FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2024-01-01', DATE '2025-12-31')) AS d;
+
+CREATE OR REPLACE TABLE \`PROJECT_ID.analytics.fact_ventas\`
+(order_id STRING NOT NULL, fecha DATE NOT NULL, customer_id STRING NOT NULL, product_id STRING NOT NULL,
+ cantidad INT64, precio_unitario NUMERIC, descuento NUMERIC, canal STRING, monto_bruto NUMERIC, monto_neto NUMERIC,
+ PRIMARY KEY (order_id) NOT ENFORCED,
+ FOREIGN KEY (customer_id) REFERENCES \`PROJECT_ID.analytics.dim_cliente\` (customer_id) NOT ENFORCED,
+ FOREIGN KEY (product_id) REFERENCES \`PROJECT_ID.analytics.dim_producto\` (product_id) NOT ENFORCED,
+ FOREIGN KEY (fecha) REFERENCES \`PROJECT_ID.analytics.dim_fecha\` (fecha) NOT ENFORCED)
+PARTITION BY fecha CLUSTER BY canal, product_id
+AS SELECT order_id, fecha, customer_id, product_id, cantidad, precio_unitario, descuento, canal, monto_bruto, monto_neto
+FROM \`PROJECT_ID.staging.stg_ventas\`;`;
+
+    const KPIS_SQL = `CREATE OR REPLACE VIEW \`PROJECT_ID.analytics.kpi_ventas_mensuales\` AS
+SELECT f.anio, f.mes, f.nombre_mes, COUNT(*) AS num_ordenes,
+  ROUND(SUM(v.monto_neto), 2) AS ventas_netas, ROUND(AVG(v.monto_neto), 2) AS ticket_promedio
+FROM \`PROJECT_ID.analytics.fact_ventas\` v
+JOIN \`PROJECT_ID.analytics.dim_fecha\` f USING (fecha)
+GROUP BY f.anio, f.mes, f.nombre_mes ORDER BY f.anio, f.mes;
+
+CREATE OR REPLACE VIEW \`PROJECT_ID.analytics.kpi_margen_categoria\` AS
+SELECT p.categoria, ROUND(SUM(v.monto_neto), 2) AS ventas_netas,
+  ROUND(SUM(v.cantidad * p.costo_unitario), 2) AS costo_total,
+  ROUND(SUM(v.monto_neto - v.cantidad * p.costo_unitario), 2) AS margen,
+  ROUND(SAFE_DIVIDE(SUM(v.monto_neto - v.cantidad * p.costo_unitario), SUM(v.monto_neto)) * 100, 1) AS margen_pct
+FROM \`PROJECT_ID.analytics.fact_ventas\` v
+JOIN \`PROJECT_ID.analytics.dim_producto\` p USING (product_id)
+GROUP BY p.categoria ORDER BY margen DESC;
+
+CREATE OR REPLACE VIEW \`PROJECT_ID.analytics.kpi_ventas_canal\` AS
+SELECT canal, COUNT(*) AS num_ordenes, ROUND(SUM(monto_neto), 2) AS ventas_netas,
+  ROUND(AVG(monto_neto), 2) AS ticket_promedio
+FROM \`PROJECT_ID.analytics.fact_ventas\` GROUP BY canal ORDER BY ventas_netas DESC;
+
+CREATE OR REPLACE VIEW \`PROJECT_ID.analytics.kpi_ventas_segmento\` AS
+SELECT c.segmento, COUNT(DISTINCT v.customer_id) AS clientes_activos, ROUND(SUM(v.monto_neto), 2) AS ventas_netas
+FROM \`PROJECT_ID.analytics.fact_ventas\` v JOIN \`PROJECT_ID.analytics.dim_cliente\` c USING (customer_id)
+GROUP BY c.segmento ORDER BY ventas_netas DESC;
+
+CREATE OR REPLACE VIEW \`PROJECT_ID.analytics.kpi_top_clientes\` AS
+SELECT c.customer_id, c.nombre, c.ciudad, c.segmento, ROUND(SUM(v.monto_neto), 2) AS valor_total
+FROM \`PROJECT_ID.analytics.fact_ventas\` v JOIN \`PROJECT_ID.analytics.dim_cliente\` c USING (customer_id)
+GROUP BY c.customer_id, c.nombre, c.ciudad, c.segmento ORDER BY valor_total DESC LIMIT 10;`;
+
+    STEPS.find(s => s.id === "02").template = STAGING_SQL;
+    STEPS.find(s => s.id === "03").template = ANALYTICS_SQL;
+    STEPS.find(s => s.id === "04").template = KPIS_SQL;
+
+    const CSV_INFO = [
+      { file: "productos.csv", table: "productos", schema: "product_id:STRING,nombre:STRING,categoria:STRING,subcategoria:STRING,costo_unitario:STRING,marca:STRING" },
+      { file: "clientes.csv", table: "clientes", schema: "customer_id:STRING,nombre:STRING,ciudad:STRING,segmento:STRING,fecha_registro:STRING" },
+      { file: "ventas.csv", table: "ventas", schema: "order_id:STRING,fecha:STRING,customer_id:STRING,product_id:STRING,cantidad:STRING,precio_unitario:STRING,descuento:STRING,canal:STRING" }
+    ];
+
+    function replaceProjectId(text, projectId) {
+      return text.split(PLACEHOLDER).join(projectId.trim());
+    }
+
+    function validateProjectId(id) {
+      const trimmed = id.trim();
+      if (!trimmed) return "Escribe un Project ID.";
+      if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(trimmed)) {
+        return "Formato sospechoso. Debe ser algo como: mi-proyecto-123456 (minúsculas, números, guiones).";
+      }
+      return null;
+    }
+
+    function copyText(text, button) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = button.textContent;
+        button.textContent = "¡Copiado!";
+        button.classList.add("copied");
+        setTimeout(() => { button.textContent = original; button.classList.remove("copied"); }, 1500);
+      });
+    }
+
+    function renderManualStep(projectId) {
+      let rows = CSV_INFO.map(c => `
+        <tr>
+          <td>${c.file}</td>
+          <td><code>${c.table}</code></td>
+          <td><button class="btn-copy" data-schema="${encodeURIComponent(c.schema)}">Copiar esquema</button></td>
+        </tr>`).join("");
+      return `
+        <p class="step-desc">Proyecto: <code>${projectId}</code> · Dataset: <code>raw</code></p>
+        <table class="csv-table">
+          <thead><tr><th>Archivo</th><th>Tabla</th><th>Esquema</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="hint" style="margin-top:0.75rem">Todo STRING · Omitir 1 encabezado · Sin detección automática</p>`;
+    }
+
+    function renderSteps(projectId) {
+      const container = document.getElementById("stepsContainer");
+      container.innerHTML = "";
+
+      STEPS.forEach((step, index) => {
+        const el = document.createElement("div");
+        el.className = "step" + (index === 0 ? " open" : "");
+        const badgeClass = step.type === "manual" ? "manual" : "sql";
+        const badgeLabel = step.type === "manual" ? "MANUAL" : "SQL";
+
+        let bodyHtml = `<p class="step-desc">${step.desc}</p>`;
+        if (step.manual) {
+          bodyHtml += renderManualStep(projectId);
+        } else {
+          const sql = replaceProjectId(step.template, projectId);
+          bodyHtml += `
+            <div class="toolbar"><button class="btn-copy" data-copy="${encodeURIComponent(sql)}">Copiar SQL</button></div>
+            <pre>${escapeHtml(sql)}</pre>`;
+        }
+
+        el.innerHTML = `
+          <div class="step-header">
+            <span class="step-title">${step.title}<span class="step-badge ${badgeClass}">${badgeLabel}</span></span>
+            <span>▼</span>
+          </div>
+          <div class="step-body">${bodyHtml}</div>`;
+
+        el.querySelector(".step-header").addEventListener("click", () => el.classList.toggle("open"));
+        container.appendChild(el);
+      });
+
+      container.querySelectorAll("[data-copy]").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          copyText(decodeURIComponent(btn.dataset.copy), btn);
+        });
+      });
+      container.querySelectorAll("[data-schema]").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          copyText(decodeURIComponent(btn.dataset.schema), btn);
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    document.getElementById("btnGenerate").addEventListener("click", () => {
+      const input = document.getElementById("projectId");
+      const error = validateProjectId(input.value);
+      if (error) { alert(error); return; }
+      localStorage.setItem("bq_project_id", input.value.trim());
+      renderSteps(input.value.trim());
+    });
+
+    document.getElementById("btnExpand").addEventListener("click", () => {
+      document.querySelectorAll(".step").forEach(s => s.classList.add("open"));
+    });
+
+    const saved = localStorage.getItem("bq_project_id");
+    if (saved) {
+      document.getElementById("projectId").value = saved;
+      renderSteps(saved);
+    }
+  </script>
+</body>
+</html>
