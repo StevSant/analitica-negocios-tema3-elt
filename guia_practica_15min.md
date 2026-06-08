@@ -41,6 +41,10 @@ Archivos a tocar:
 
 ---
 
+## Herramienta rápida — Configurador HTML
+
+Abre `configurador-bigquery.html` (doble clic en el navegador): pega tu Project ID y copia cada SQL ya reemplazado.
+
 ## Antes de mañana (ensayo en casa — recomendado)
 
 - [ ] Clonar el repo: `https://github.com/DweskZ/analitica-negocios-tema3-elt`

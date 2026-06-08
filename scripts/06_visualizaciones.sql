@@ -56,7 +56,7 @@ ORDER BY margen DESC;
 -- ---------------------------------------------------------------------------
 -- 5. DESPUÉS — Top 10 clientes (ranking en BARRAS)
 -- ---------------------------------------------------------------------------
-SELECT nombre_cliente, ciudad, valor_total
+SELECT nombre, ciudad, valor_total
 FROM `PROJECT_ID.analytics.kpi_top_clientes`
 ORDER BY valor_total DESC
 LIMIT 10;
