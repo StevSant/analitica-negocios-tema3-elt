@@ -13,11 +13,11 @@
 --   3. Ejecuta este script ANTES de cargar los CSV (ver 01_load_raw.md).
 -- =============================================================================
 
-CREATE SCHEMA IF NOT EXISTS `PROJECT_ID.raw`
+CREATE SCHEMA IF NOT EXISTS `hackiaton-ia.raw`
   OPTIONS (location = 'US', description = 'Capa cruda: CSV cargados sin transformar (EL)');
 
-CREATE SCHEMA IF NOT EXISTS `PROJECT_ID.staging`
+CREATE SCHEMA IF NOT EXISTS `hackiaton-ia.staging`
   OPTIONS (location = 'US', description = 'Capa intermedia: limpieza y casteo (T - paso 1)');
 
-CREATE SCHEMA IF NOT EXISTS `PROJECT_ID.analytics`
+CREATE SCHEMA IF NOT EXISTS `hackiaton-ia.analytics`
   OPTIONS (location = 'US', description = 'Capa de negocio: modelo estrella y KPIs (T - paso 2)');

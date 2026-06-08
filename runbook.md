@@ -48,6 +48,11 @@ integrantes**, ~15 minutos. Ajusta los roles si son menos personas.
    (1 hechos + 3 dimensiones) y señalar las **llaves** y que `fact_ventas` está
    **particionada por fecha y clusterizada**.
 
+   > 👉 El "cómo mostrar" paso a paso (qué clicar y qué decir) está en la
+   > **sección 5** de este runbook. Lo que ves al abrir el dataset `analytics`
+   > (las 4 tablas `dim_cliente`, `dim_fecha`, `dim_producto`, `fact_ventas`)
+   > **ESO es la estrella** — BigQuery no la dibuja, la explicas tú.
+
 ### Bloque C — KPIs y costos (Integrante C) · ~5 min
 9. Ejecutar `04_kpis.sql`. Consultar `kpi_ventas_mensuales` y `kpi_margen_categoria`.
    **Narrar:** "Agregar un KPI = una vista SQL más. Eso es la agilidad del ELT."
@@ -81,3 +86,98 @@ integrantes**, ~15 minutos. Ajusta los roles si son menos personas.
 Tener instalado **DuckDB** local como respaldo: los mismos CSV y casi el mismo
 SQL (cambian las funciones de fecha) corren offline. Mantener este runbook y los
 scripts a mano para no improvisar.
+
+---
+
+## 5. Cómo MOSTRAR el modelo en la consola de BigQuery (UI paso a paso)
+
+La consola **no dibuja** la estrella ni los KPIs automáticamente: navegas el
+**Explorer** (panel izquierdo) y abres pestañas. Esto es lo que se clica y se dice.
+
+### 5.1 Mostrar el modelo estrella
+
+1. En el **Explorer**, despliega tu proyecto → dataset **`analytics`**.
+2. Verás **4 tablas**: `fact_ventas`, `dim_cliente`, `dim_producto`, `dim_fecha`.
+   **→ ESO es la estrella.** No hay un diagrama; las 4 tablas SON el modelo.
+3. **Narrar:** *"`fact_ventas` es la tabla de hechos en el centro; las tres
+   `dim_*` son las dimensiones que la rodean. Por eso se llama modelo estrella."*
+
+> 💡 Si quieres una imagen de la estrella para proyectar, está el diagrama ASCII
+> en el README (sección 3). También puedes dibujarla en la pizarra: un rectángulo
+> central (hechos) con 3 flechas hacia las dimensiones.
+
+### 5.2 Mostrar las LLAVES (PK / FK)
+
+1. Clic en la tabla **`fact_ventas`** → pestaña **SCHEMA** (Esquema): se ven las
+   columnas y cuáles son `NOT NULL`.
+2. Para ver las restricciones PK/FK declaradas, ejecuta en el editor:
+
+   ```sql
+   SELECT table_name, constraint_name, constraint_type
+   FROM `hackiaton-ia.analytics.INFORMATION_SCHEMA.TABLE_CONSTRAINTS`
+   ORDER BY table_name;
+   ```
+
+3. **Narrar:** *"`fact_ventas` tiene PK en `order_id` y tres FK que apuntan a las
+   dimensiones. Son `NOT ENFORCED`: documentan el modelo y guían al optimizador,
+   sin frenar la carga."*
+
+### 5.3 Mostrar PARTICIÓN + CLUSTERING
+
+1. Clic en **`fact_ventas`** → pestaña **DETAILS** (Detalles).
+2. Busca los campos **"Partitioned by: fecha (DAY)"** y
+   **"Clustered by: canal, product_id"**.
+3. Alternativa con SQL (muestra el DDL completo con `PARTITION BY` / `CLUSTER BY`):
+
+   ```sql
+   SELECT ddl
+   FROM `hackiaton-ia.analytics.INFORMATION_SCHEMA.TABLES`
+   WHERE table_name = 'fact_ventas';
+   ```
+
+4. **Narrar:** *"Está particionada por fecha y clusterizada por canal y producto.
+   Por eso una consulta con filtro de fecha solo escanea las particiones
+   necesarias — lo demostramos en bytes con `05`."*
+
+### 5.4 Mostrar los KPIs (Bloque C)
+
+1. En `analytics` verás también las **vistas** `kpi_*` (ícono distinto al de tabla).
+2. Para verlas en acción, en el editor:
+
+   ```sql
+   SELECT * FROM `hackiaton-ia.analytics.kpi_ventas_mensuales`;
+   SELECT * FROM `hackiaton-ia.analytics.kpi_margen_categoria`;
+   ```
+
+3. **Narrar:** *"Cada KPI es una vista SQL sobre la estrella. Agregar un KPI nuevo
+   = escribir una vista más; no se reprocesa el pipeline. Esa es la agilidad del ELT."*
+
+---
+
+## 6. Glosario rápido (para responder al instante)
+
+| Término | En una frase |
+|---|---|
+| **ETL** | Extrae → **Transforma** (servidor fijo) → Carga. Limpia ANTES de cargar. |
+| **ELT** | Extrae → **Carga** (crudo) → **Transforma** dentro del warehouse elástico. |
+| **Medallion** | Capas de calidad creciente: `raw` (crudo) → `staging` (limpio) → `analytics` (negocio). |
+| **`raw`** | CSV cargados tal cual, todo `STRING`. La "L". Reprocesable. |
+| **`staging`** | Vistas que limpian, castean y deduplican. La "T" paso 1. |
+| **`analytics`** | Modelo estrella + KPIs. La "T" paso 2. |
+| **Modelo estrella** | 1 tabla de **hechos** central + N **dimensiones** alrededor. Desnormalizado → rápido. |
+| **Tabla de hechos** | Eventos medibles del negocio + métricas numéricas (`fact_ventas`). |
+| **Dimensión** | Contexto para filtrar/agrupar: cliente, producto, fecha (`dim_*`). |
+| **PK (primaria)** | Identifica de forma única cada fila. |
+| **FK (foránea)** | Apunta a la PK de otra tabla; conecta la estrella. |
+| **`NOT ENFORCED`** | La llave se declara pero BigQuery no la valida; documenta y optimiza. |
+| **Particionado** | Divide la tabla por fecha en bloques físicos. |
+| **Partition pruning** | Filtrar por fecha hace leer SOLO las particiones de ese rango → menos bytes. |
+| **Clustering** | Ordena los datos dentro de cada partición por columnas (canal, producto). |
+| **Bytes procesados** | Lo que BigQuery factura por consulta. Menos bytes = menos costo. |
+| **Casteo (CAST)** | Convertir texto crudo a su tipo real (DATE, INT64, NUMERIC). |
+| **Deduplicar** | Conservar una sola fila por clave si llega repetida (`QUALIFY ROW_NUMBER()`). |
+| **Vista vs Tabla** | Vista = consulta guardada sin almacenamiento; Tabla = datos físicos. |
+| **KPI** | Métrica de negocio; aquí cada uno es una vista SQL. |
+| **Sandbox** | BigQuery gratis, 1 TiB/mes de consulta, sin tarjeta. |
+
+> Glosario **ampliado y con más detalle** en el `README.md`, sección 7.
