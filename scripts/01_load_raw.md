@@ -56,42 +56,10 @@ order_id:STRING,fecha:STRING,customer_id:STRING,product_id:STRING,cantidad:STRIN
 Ejecuta en el editor de consultas (reemplaza `PROJECT_ID`):
 
 ```sql
-SELECT 'productos' AS tabla, COUNT(*) AS filas FROM `hackiaton-ia.raw.productos`
-UNION ALL SELECT 'clientes', COUNT(*) FROM `hackiaton-ia.raw.clientes`
-UNION ALL SELECT 'ventas',   COUNT(*) FROM `hackiaton-ia.raw.ventas`;
+SELECT 'productos' AS tabla, COUNT(*) AS filas FROM `PROJECT_ID.raw.productos`
+UNION ALL SELECT 'clientes', COUNT(*) FROM `PROJECT_ID.raw.clientes`
+UNION ALL SELECT 'ventas',   COUNT(*) FROM `PROJECT_ID.raw.ventas`;
 ```
 
 Deberías ver **200**, **5 000** y **300 000** filas respectivamente. Si coincide,
 la capa RAW está lista y pasamos a `02_staging.sql`.
-
----
-
-## ⚠️ Problema frecuente: filas +1 (el encabezado se cargó como dato)
-
-Si la verificación da **201 / 5 001 / 300 001** en vez de 200 / 5 000 / 300 000,
-el encabezado del CSV se cargó como una fila de datos. Esto **rompe `02`/`03`**
-con un error tipo `Invalid NUMERIC value: costo_unitario` (intenta castear el
-texto del encabezado a número).
-
-**Por qué pasa:** al definir el esquema con **Edit as text** (todo STRING),
-BigQuery desactiva la autodetección y *"Header rows to skip"* vuelve a **0**.
-Si no lo pones en **1** explícitamente en **Advanced options** (paso 6), el
-encabezado entra como dato.
-
-**Solución garantizada (limpieza con SQL, no depende del formulario):**
-
-```sql
-CREATE OR REPLACE TABLE `hackiaton-ia.raw.productos` AS
-SELECT * FROM `hackiaton-ia.raw.productos` WHERE product_id <> 'product_id';
-
-CREATE OR REPLACE TABLE `hackiaton-ia.raw.clientes` AS
-SELECT * FROM `hackiaton-ia.raw.clientes` WHERE customer_id <> 'customer_id';
-
-CREATE OR REPLACE TABLE `hackiaton-ia.raw.ventas` AS
-SELECT * FROM `hackiaton-ia.raw.ventas` WHERE order_id <> 'order_id';
-```
-
-Vuelve a correr la verificación de arriba → debe dar **200 / 5 000 / 300 000**.
-
-> 💡 Bonus para la defensa: esta limpieza con SQL *dentro* del warehouse es
-> justamente el espíritu del ELT (la "T" sobre el dato crudo ya cargado).
